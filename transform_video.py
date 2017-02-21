@@ -1,9 +1,8 @@
 from __future__ import print_function
 from argparse import ArgumentParser
 import sys
-sys.path.insert(0, 'src')
 import os, random, subprocess, evaluate, shutil
-from utils import exists, list_files
+import fast_style_transfer as fst
 import pdb
 
 TMP_DIR = '.fns_frames_%s/' % random.randint(0,99999)
@@ -42,8 +41,8 @@ def build_parser():
     return parser
 
 def check_opts(opts):
-    exists(opts.checkpoint)
-    exists(opts.out)
+    fst.utils.exists(opts.checkpoint)
+    fst.utils.exists(opts.out)
 
 def main():
     parser = build_parser()
@@ -66,7 +65,7 @@ def main():
         ]
 
         subprocess.call(" ".join(in_args), shell=True)
-        base_names = list_files(in_dir)
+        base_names = fst.utils.list_files(in_dir)
         in_files = [os.path.join(in_dir, x) for x in base_names]
         out_files = [os.path.join(out_dir, x) for x in base_names]
         evaluate.ffwd(in_files, out_files, opts.checkpoint, device_t=opts.device,

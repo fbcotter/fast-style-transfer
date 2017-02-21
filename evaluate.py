@@ -1,16 +1,16 @@
 from __future__ import print_function
 import sys
-sys.path.insert(0, 'src')
-import transform, numpy as np, vgg, pdb, os
+import numpy as np, pdb, os
 import scipy.misc
 import tensorflow as tf
-from utils import save_img, get_img, exists, list_files
+import fast_style_transfer as fst
 from argparse import ArgumentParser
 from collections import defaultdict
 import time
 import json
 import subprocess
 import numpy
+
 
 BATCH_SIZE = 4
 DEVICE = '/gpu:0'
@@ -38,7 +38,7 @@ def from_pipe(opts):
 
     command = ["ffmpeg",
                '-loglevel', "info",
-               '-y',  # (optional) overwrite output file if it exists
+               '-y',  # (optional) overwrite output file if it fst.exists
                '-f', 'rawvideo',
                '-vcodec', 'rawvideo',
                '-s', str(width) + 'x' + str(height),  # size of one frame
@@ -61,7 +61,7 @@ def from_pipe(opts):
         batch_shape = (opts.batch_size, height, width, 3)
         img_placeholder = tf.placeholder(tf.float32, shape=batch_shape,
                                          name='img_placeholder')
-        preds = transform.net(img_placeholder)
+        preds = fst.transform.net(img_placeholder)
         saver = tf.train.Saver()
         if os.path.isdir(opts.checkpoint):
             ckpt = tf.train.get_checkpoint_state(opts.checkpoint)
@@ -91,7 +91,7 @@ def from_pipe(opts):
                         batch_shape = (count, height, width, 3)
                         img_placeholder = tf.placeholder(tf.float32, shape=batch_shape,
                                                      name='img_placeholder')
-                        preds = transform.net(img_placeholder)
+                        preds = fst.transform.net(img_placeholder)
                     break
 
                 image = numpy.fromstring(raw_image, dtype='uint8')
@@ -128,7 +128,7 @@ def ffwd(data_in, paths_out, checkpoint_dir, device_t='/gpu:0', batch_size=4):
     is_paths = type(data_in[0]) == str
     if is_paths:
         assert len(data_in) == len(paths_out)
-        img_shape = get_img(data_in[0]).shape
+        img_shape = fst.utils.get_img(data_in[0]).shape
     else:
         assert data_in.size[0] == len(paths_out)
         img_shape = X[0].shape
@@ -144,7 +144,7 @@ def ffwd(data_in, paths_out, checkpoint_dir, device_t='/gpu:0', batch_size=4):
         img_placeholder = tf.placeholder(tf.float32, shape=batch_shape,
                                          name='img_placeholder')
 
-        preds = transform.net(img_placeholder)
+        preds = fst.transform.net(img_placeholder)
         saver = tf.train.Saver()
         if os.path.isdir(checkpoint_dir):
             ckpt = tf.train.get_checkpoint_state(checkpoint_dir)
@@ -163,7 +163,7 @@ def ffwd(data_in, paths_out, checkpoint_dir, device_t='/gpu:0', batch_size=4):
                 curr_batch_in = data_in[pos:pos+batch_size]
                 X = np.zeros(batch_shape, dtype=np.float32)
                 for j, path_in in enumerate(curr_batch_in):
-                    img = get_img(path_in)
+                    img = fst.utils.get_img(path_in)
                     assert img.shape == img_shape, \
                         'Images have different dimensions. ' +  \
                         'Resize images or use --allow-different-dimensions.'
@@ -173,7 +173,7 @@ def ffwd(data_in, paths_out, checkpoint_dir, device_t='/gpu:0', batch_size=4):
 
             _preds = sess.run(preds, feed_dict={img_placeholder:X})
             for j, path_out in enumerate(curr_batch_out):
-                save_img(path_out, _preds[j])
+                fst.utils.save_img(path_out, _preds[j])
                 
         remaining_in = data_in[num_iters*batch_size:]
         remaining_out = paths_out[num_iters*batch_size:]
@@ -192,7 +192,7 @@ def ffwd_different_dimensions(in_path, out_path, checkpoint_dir,
     for i in range(len(in_path)):
         in_image = in_path[i]
         out_image = out_path[i]
-        shape = "%dx%dx%d" % get_img(in_image).shape
+        shape = "%dx%dx%d" % fst.utils.get_img(in_image).shape
         in_path_of_shape[shape].append(in_image)
         out_path_of_shape[shape].append(out_image)
     for shape in in_path_of_shape:
@@ -231,10 +231,10 @@ def build_parser():
     return parser
 
 def check_opts(opts):
-    exists(opts.checkpoint_dir, 'Checkpoint not found!')
-    exists(opts.in_path, 'In path not found!')
+    fst.utils.exists(opts.checkpoint_dir, 'Checkpoint not found!')
+    fst.utils.exists(opts.in_path, 'In path not found!')
     if os.path.isdir(opts.out_path):
-        exists(opts.out_path, 'out dir not found!')
+        fst.utils.exists(opts.out_path, 'out dir not found!')
         assert opts.batch_size > 0
 
 def main():
@@ -252,7 +252,7 @@ def main():
         ffwd_to_img(opts.in_path, out_path, opts.checkpoint_dir,
                     device=opts.device)
     else:
-        files = list_files(opts.in_path)
+        files = fst.utils.list_files(opts.in_path)
         full_in = [os.path.join(opts.in_path,x) for x in files]
         full_out = [os.path.join(opts.out_path,x) for x in files]
         if opts.allow_different_dimensions:

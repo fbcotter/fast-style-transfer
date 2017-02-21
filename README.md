@@ -80,12 +80,35 @@ Use `transform_video.py` to transfer style into a video. Run `python transform_v
 
 ### Requirements
 You will need the following to run the above:
-- TensorFlow 0.11.0
-- Python 2.7.9, Pillow 3.4.2, scipy 0.18.1, numpy 1.11.2
+- TensorFlow >=0.11.0
+- Python 2.7.9, or 3.5+, Pillow 3.4.2, scipy 0.18.1, numpy 1.11.2
 - If you want to train (and don't want to wait for 4 months):
   - A decent GPU
   - All the required NVIDIA software to run TF on a GPU (cuda, etc)
 - ffmpeg 3.1.3 if you want to stylize video
+
+### Installation
+1. Clone the repo to your machine. Change directory to the root of the repo.
+2. (Optionally) create a virtual environment
+```
+virtualenv -p pythonX.X venv
+```
+And source it
+```
+source venv/bin/activate
+```
+3. Install the requirements
+```
+pip install -r requirements.txt
+```
+4. Install the package
+```
+pip install .
+``` 
+5. Run! E.g.
+```
+python style.py --checkpoint-dir X --style Y
+```
 
 ### Citation
 ```
